@@ -182,8 +182,7 @@
                     <i class="fa-solid fa-triangle-exclamation mr-1"></i> Przywróć domyślny plan
                 </button>
                 <div class="flex space-x-2">
-                    <button onclick="closeEditModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-semibold transition">Anuluj</button>
-                    <button onclick="savePlanChanges()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-600/20">Zapisz zmiany</button>
+                    <button onclick="closeEditModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-600/20">Gotowe</button>
                 </div>
             </div>
         </div>
@@ -473,18 +472,18 @@
                 let exHtml = day.exercises.map((ex, eIdx) => `
                     <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-2 mb-2">
                         <div class="flex items-center space-x-2">
-                            <input type="text" value="${ex.name}" onchange="editExerciseName(${dIdx}, ${eIdx}, this.value)" class="flex-1 bg-inputbg text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700">
-                            <input type="text" value="${ex.group}" onchange="editExerciseGroup(${dIdx}, ${eIdx}, this.value)" class="w-24 bg-inputbg text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700" placeholder="Partia">
+                            <input type="text" value="${ex.name}" oninput="editExerciseName(${dIdx}, ${eIdx}, this.value)" class="flex-1 bg-inputbg text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700">
+                            <input type="text" value="${ex.group}" oninput="editExerciseGroup(${dIdx}, ${eIdx}, this.value)" class="w-24 bg-inputbg text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700" placeholder="Partia">
                             <button onclick="removeExercise(${dIdx}, ${eIdx})" class="text-red-400 hover:text-red-300 p-1.5"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                         <div class="flex space-x-2 text-xs">
                             <div class="flex items-center space-x-1 flex-1">
                                 <span class="text-slate-500">Reps:</span>
-                                <input type="text" value="${ex.reps}" onchange="editExerciseField(${dIdx}, ${eIdx}, 'reps', this.value)" class="w-full bg-inputbg text-white px-2 py-1 rounded border border-slate-700">
+                                <input type="text" value="${ex.reps}" oninput="editExerciseField(${dIdx}, ${eIdx}, 'reps', this.value)" class="w-full bg-inputbg text-white px-2 py-1 rounded border border-slate-700">
                             </div>
                             <div class="flex items-center space-x-1 flex-1">
                                 <span class="text-slate-500">Serie:</span>
-                                <input type="number" value="${ex.sets.length}" onchange="editExerciseSetsCount(${dIdx}, ${eIdx}, this.value)" class="w-full bg-inputbg text-white px-2 py-1 rounded border border-slate-700">
+                                <input type="number" value="${ex.sets.length}" oninput="editExerciseSetsCount(${dIdx}, ${eIdx}, this.value)" class="w-full bg-inputbg text-white px-2 py-1 rounded border border-slate-700">
                             </div>
                         </div>
                     </div>
@@ -495,11 +494,11 @@
                         <div class="grid grid-cols-2 gap-2 pb-2 border-b border-slate-800">
                             <div>
                                 <label class="text-[10px] text-slate-500 font-bold block mb-1">Etykieta dnia:</label>
-                                <input type="text" value="${day.badge}" onchange="editDayBadge(${dIdx}, this.value)" class="w-full bg-inputbg text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">
+                                <input type="text" value="${day.badge}" oninput="editDayBadge(${dIdx}, this.value)" class="w-full bg-inputbg text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">
                             </div>
                             <div>
                                 <label class="text-[10px] text-slate-500 font-bold block mb-1">Nazwa dnia:</label>
-                                <input type="text" value="${day.title}" onchange="editDayTitle(${dIdx}, this.value)" class="w-full bg-inputbg text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">
+                                <input type="text" value="${day.title}" oninput="editDayTitle(${dIdx}, this.value)" class="w-full bg-inputbg text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">
                             </div>
                         </div>
                         <div>
@@ -522,8 +521,18 @@
             renderActiveWorkout();
         }
 
-        function editDayBadge(dIdx, val) { appData.days[dIdx].badge = val; saveData(); }
-        function editDayTitle(dIdx, val) { appData.days[dIdx].title = val; saveData(); }
+        function editDayBadge(dIdx, val) { 
+            appData.days[dIdx].badge = val; 
+            saveData(); 
+            renderDaysTabs();
+        }
+        
+        function editDayTitle(dIdx, val) { 
+            appData.days[dIdx].title = val; 
+            saveData(); 
+            renderDaysTabs();
+        }
+
         function editExerciseName(dIdx, eIdx, val) { appData.days[dIdx].exercises[eIdx].name = val; saveData(); }
         function editExerciseGroup(dIdx, eIdx, val) { appData.days[dIdx].exercises[eIdx].group = val; saveData(); }
         function editExerciseField(dIdx, eIdx, field, val) { appData.days[dIdx].exercises[eIdx][field] = val; saveData(); }
@@ -557,10 +566,6 @@
             });
             saveData();
             openEditModal();
-        }
-
-        function savePlanChanges() {
-            closeEditModal();
         }
 
         function resetPlanToDefault() {
