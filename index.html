@@ -91,7 +91,7 @@
                 </button>
                 <button onclick="openEditModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center space-x-1">
                     <i class="fa-solid fa-pen-to-square text-xs"></i>
-                    <span>Edytuj Plan</span>
+                    <span>Edytuj</span>
                 </button>
             </div>
         </div>
@@ -264,13 +264,13 @@
         </div>
     </div>
 
-    <!-- EDIT / CUSTOMIZE PLAN MODAL (SZABLON GŁÓWNY) -->
+    <!-- EDIT / CUSTOMIZE PLAN MODAL -->
     <div id="edit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-5 shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-700">
                 <div class="flex items-center space-x-2">
                     <i class="fa-solid fa-pen-to-square text-emerald-400 text-lg"></i>
-                    <h3 class="font-bold text-white text-base">Edytor Szablonu Treningowego</h3>
+                    <h3 class="font-bold text-white text-base" id="edit-modal-title">Edytor Planu</h3>
                 </div>
                 <button onclick="closeEditModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
                     <i class="fa-solid fa-xmark text-lg"></i>
@@ -284,7 +284,7 @@
 
             <!-- EDYCJA NAZW DANEGO DNIA -->
             <div class="bg-slate-900 border border-slate-700/80 rounded-xl p-3 mb-3 space-y-2">
-                <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wide">Edycja nagłówka dnia (Zmienia we wszystkich tygodniach)</div>
+                <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wide">Edycja nagłówka dnia (Tylko Tydzień <span id="edit-week-label">1</span>)</div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="text-[10px] text-slate-400 block mb-1">Etykieta (np. DZIEŃ 1):</label>
@@ -312,11 +312,11 @@
             </button>
 
             <div class="flex space-x-2 pt-2 border-t border-slate-700">
-                <button onclick="resetPlanToDefault()" class="px-3 py-2 bg-slate-700/60 hover:bg-slate-600 text-slate-300 text-xs font-bold rounded-xl transition">
-                    Reset planu
+                <button onclick="resetCurrentWeekToDefault()" class="px-3 py-2 bg-slate-700/60 hover:bg-slate-600 text-slate-300 text-xs font-bold rounded-xl transition">
+                    Reset tygodnia
                 </button>
                 <button onclick="closeEditModal()" class="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-emerald-500/20">
-                    Zapisz dla wszystkich tygodni
+                    Gotowe / Zapisz
                 </button>
             </div>
         </div>
@@ -330,7 +330,7 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="text-slate-400 block mb-1">Nazwa ćwiczenia:</label>
-                    <input type="text" id="new-ex-name" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-emerald-500" placeholder="np. Wyciskanie sztangi ławka ujemna">
+                    <input type="text" id="new-ex-name" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-emerald-500" placeholder="np. Wyciskanie hantli skos">
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
@@ -419,10 +419,10 @@
             }
         };
 
-        let masterPlan = JSON.parse(JSON.stringify(defaultWorkoutData));
         let currentDayKey = 'day1';
         let currentWeekNumber = 1;
         let totalWeeks = 4;
+        let weeksPlans = {}; 
         let savedData = {};
         let currentEditDayKey = 'day1';
 
@@ -589,14 +589,19 @@
             }
         }
 
+        function getActiveWeekPlan() {
+            const weekKey = `week_${currentWeekNumber}`;
+            if (!weeksPlans[weekKey]) {
+                weeksPlans[weekKey] = JSON.parse(JSON.stringify(defaultWorkoutData));
+            }
+            return weeksPlans[weekKey];
+        }
+
         function loadAppData() {
             try {
-                // Czyszczenie ew. powiązań z poprzednich błędnych wersji
-                localStorage.removeItem('gym_tracker_weeks_plans');
-                
-                const planSaved = localStorage.getItem('gym_tracker_master_plan');
-                if (planSaved) {
-                    masterPlan = JSON.parse(planSaved);
+                const plansSaved = localStorage.getItem('gym_tracker_weeks_plans');
+                if (plansSaved) {
+                    weeksPlans = JSON.parse(plansSaved);
                 }
 
                 const data = localStorage.getItem('gym_tracker_weeks_data');
@@ -613,7 +618,7 @@
 
         function saveAppData() {
             try {
-                localStorage.setItem('gym_tracker_master_plan', JSON.stringify(masterPlan));
+                localStorage.setItem('gym_tracker_weeks_plans', JSON.stringify(weeksPlans));
                 const payload = {
                     totalWeeks: totalWeeks,
                     currentWeekNumber: currentWeekNumber,
@@ -651,6 +656,7 @@
         function addNewWeek() {
             totalWeeks++;
             currentWeekNumber = totalWeeks;
+            weeksPlans[`week_${currentWeekNumber}`] = JSON.parse(JSON.stringify(defaultWorkoutData));
             saveAppData();
             renderWeekTabs();
             renderHeaderDayTabs();
@@ -661,8 +667,10 @@
             const container = document.getElementById('day-tabs-container');
             container.innerHTML = '';
 
-            Object.keys(masterPlan).forEach(key => {
-                const dayObj = masterPlan[key];
+            const currentWorkoutData = getActiveWeekPlan();
+
+            Object.keys(currentWorkoutData).forEach(key => {
+                const dayObj = currentWorkoutData[key];
                 const btn = document.createElement('button');
                 btn.id = `tab-${key}`;
                 btn.onclick = () => switchDay(key);
@@ -682,7 +690,8 @@
         }
 
         function switchDay(dayKey) {
-            if (!masterPlan[dayKey]) dayKey = Object.keys(masterPlan)[0];
+            const currentWorkoutData = getActiveWeekPlan();
+            if (!currentWorkoutData[dayKey]) dayKey = Object.keys(currentWorkoutData)[0];
             currentDayKey = dayKey;
             renderHeaderDayTabs();
             renderDayContent();
@@ -705,10 +714,11 @@
         }
 
         function renderDayContent() {
-            if (!masterPlan[currentDayKey]) {
-                currentDayKey = Object.keys(masterPlan)[0] || 'day1';
+            const currentWorkoutData = getActiveWeekPlan();
+            if (!currentWorkoutData[currentDayKey]) {
+                currentDayKey = Object.keys(currentWorkoutData)[0] || 'day1';
             }
-            const currentWorkout = masterPlan[currentDayKey];
+            const currentWorkout = currentWorkoutData[currentDayKey];
             const weekDataKey = `week_${currentWeekNumber}`;
             const currentWeekData = savedData[weekDataKey] || {};
 
@@ -828,7 +838,8 @@
         }
 
         function calculateStats() {
-            const currentWorkout = masterPlan[currentDayKey];
+            const currentWorkoutData = getActiveWeekPlan();
+            const currentWorkout = currentWorkoutData[currentDayKey];
             if (!currentWorkout) return;
             const weekKey = `week_${currentWeekNumber}`;
             const currentWeekData = savedData[weekKey] || {};
@@ -863,8 +874,9 @@
         }
 
         function openVideoModal(exId) {
+            const currentWorkoutData = getActiveWeekPlan();
             let foundExercise = null;
-            Object.values(masterPlan).forEach(day => {
+            Object.values(currentWorkoutData).forEach(day => {
                 const match = day.exercises.find(e => e.id === exId);
                 if (match) foundExercise = match;
             });
@@ -900,8 +912,9 @@
             const select = document.getElementById('history-exercise-select');
             select.innerHTML = '';
 
-            Object.keys(masterPlan).forEach(dKey => {
-                const dayObj = masterPlan[dKey];
+            const currentWorkoutData = getActiveWeekPlan();
+            Object.keys(currentWorkoutData).forEach(dKey => {
+                const dayObj = currentWorkoutData[dKey];
                 const group = document.createElement('optgroup');
                 group.label = `${dayObj.badge}: ${dayObj.title}`;
 
@@ -928,15 +941,18 @@
             const container = document.getElementById('history-content');
             container.innerHTML = '';
 
-            let foundExercise = null;
-            Object.values(masterPlan).forEach(day => {
-                const match = day.exercises.find(e => e.id === exId);
-                if (match) foundExercise = match;
-            });
-
-            if (!foundExercise) return;
-
             for (let w = 1; w <= totalWeeks; w++) {
+                const weekPlanKey = `week_${w}`;
+                const weekPlan = weeksPlans[weekPlanKey] || defaultWorkoutData;
+                
+                let foundExercise = null;
+                Object.values(weekPlan).forEach(day => {
+                    const match = day.exercises.find(e => e.id === exId);
+                    if (match) foundExercise = match;
+                });
+
+                if (!foundExercise) continue;
+
                 const weekKey = `week_${w}`;
                 const weekData = savedData[weekKey] || {};
 
@@ -991,6 +1007,8 @@
 
         // EDIT PLAN FUNCTIONS
         function openEditModal() {
+            document.getElementById('edit-modal-title').innerText = `Edytor Planu (Tydzień ${currentWeekNumber})`;
+            document.getElementById('edit-week-label').innerText = currentWeekNumber;
             document.getElementById('edit-modal').classList.remove('hidden');
             renderEditDayTabs();
             selectEditDayTab(currentEditDayKey);
@@ -1006,8 +1024,9 @@
             const container = document.getElementById('edit-day-tabs-container');
             container.innerHTML = '';
 
-            Object.keys(masterPlan).forEach(k => {
-                const dayObj = masterPlan[k];
+            const currentWorkoutData = getActiveWeekPlan();
+            Object.keys(currentWorkoutData).forEach(k => {
+                const dayObj = currentWorkoutData[k];
                 const btn = document.createElement('button');
                 btn.id = `edit-tab-${k}`;
                 btn.onclick = () => selectEditDayTab(k);
@@ -1021,7 +1040,8 @@
             currentEditDayKey = dayKey;
             renderEditDayTabs();
 
-            const dayObj = masterPlan[dayKey];
+            const currentWorkoutData = getActiveWeekPlan();
+            const dayObj = currentWorkoutData[dayKey];
             if (!dayObj) return;
 
             document.getElementById('edit-day-badge-input').value = dayObj.badge || '';
@@ -1032,10 +1052,11 @@
         }
 
         function updateCurrentDayMeta() {
-            if (!masterPlan[currentEditDayKey]) return;
-            masterPlan[currentEditDayKey].badge = document.getElementById('edit-day-badge-input').value;
-            masterPlan[currentEditDayKey].subTitle = document.getElementById('edit-day-sub-input').value;
-            masterPlan[currentEditDayKey].title = document.getElementById('edit-day-title-input').value;
+            const currentWorkoutData = getActiveWeekPlan();
+            if (!currentWorkoutData[currentEditDayKey]) return;
+            currentWorkoutData[currentEditDayKey].badge = document.getElementById('edit-day-badge-input').value;
+            currentWorkoutData[currentEditDayKey].subTitle = document.getElementById('edit-day-sub-input').value;
+            currentWorkoutData[currentEditDayKey].title = document.getElementById('edit-day-title-input').value;
             saveAppData();
             renderHeaderDayTabs();
         }
@@ -1043,7 +1064,8 @@
         function renderEditExercisesList() {
             const container = document.getElementById('edit-exercises-list');
             container.innerHTML = '';
-            const dayObj = masterPlan[currentEditDayKey];
+            const currentWorkoutData = getActiveWeekPlan();
+            const dayObj = currentWorkoutData[currentEditDayKey];
             if (!dayObj) return;
 
             dayObj.exercises.forEach((ex, idx) => {
@@ -1063,7 +1085,8 @@
         }
 
         function removeExercise(dayKey, index) {
-            masterPlan[dayKey].exercises.splice(index, 1);
+            const currentWorkoutData = getActiveWeekPlan();
+            currentWorkoutData[dayKey].exercises.splice(index, 1);
             saveAppData();
             renderEditExercisesList();
         }
@@ -1089,10 +1112,11 @@
                 return;
             }
 
+            const currentWorkoutData = getActiveWeekPlan();
             const newId = `${currentEditDayKey}_custom_${Date.now()}`;
-            masterPlan[currentEditDayKey].exercises.push({
+            currentWorkoutData[currentEditDayKey].exercises.push({
                 id: newId,
-                name: `${masterPlan[currentEditDayKey].exercises.length + 1}. ${name}`,
+                name: `${currentWorkoutData[currentEditDayKey].exercises.length + 1}. ${name}`,
                 sets: sets,
                 targetReps: reps,
                 tempo: "2011",
@@ -1110,9 +1134,10 @@
             document.getElementById('new-ex-tips').value = '';
         }
 
-        function resetPlanToDefault() {
-            if (confirm("Czy na pewno chcesz przywrócić domyślny plan treningowy dla wszystkich tygodni?")) {
-                masterPlan = JSON.parse(JSON.stringify(defaultWorkoutData));
+        function resetCurrentWeekToDefault() {
+            if (confirm(`Czy na pewno chcesz przywrócić domyślny plan dla Tygodnia ${currentWeekNumber}?`)) {
+                const weekKey = `week_${currentWeekNumber}`;
+                weeksPlans[weekKey] = JSON.parse(JSON.stringify(defaultWorkoutData));
                 saveAppData();
                 selectEditDayTab(currentEditDayKey);
                 renderHeaderDayTabs();
@@ -1124,7 +1149,7 @@
             loadAppData();
             renderWeekTabs();
             renderHeaderDayTabs();
-            switchDay(Object.keys(masterPlan)[0] || 'day1');
+            switchDay(Object.keys(getActiveWeekPlan())[0] || 'day1');
             updateTimerUI();
         };
     </script>
